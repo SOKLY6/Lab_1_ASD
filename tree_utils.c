@@ -21,7 +21,9 @@ int insert_node(Tree *tree, int value){
     while (current != NULL) {
         parent = current;
         result = tree->cmp(value, current->value);
-        if (result >= 0){
+        if (result == 0){
+            return 2;
+        } else if (result > 0){
             current = current->right;
         } else if (result < 0) {
             current = current->left;
@@ -35,7 +37,15 @@ int insert_node(Tree *tree, int value){
     new_node->value = value;
     new_node->left = NULL;
     new_node->right = NULL;
-    current = new_node;
+    if (parent == NULL) {
+        tree->root = new_node;
+    } else {
+        if (tree->cmp(value, parent->value) >= 0) {
+            parent->right = new_node;
+        } else {
+            parent->left = new_node;
+        }
+    }
     return 0;
 }
 
@@ -43,30 +53,26 @@ void print_tree(const Node *root, int level){
     if (root == NULL) {
         return;
     }
+    print_tree(root->right, level + 1);
     printf("%*s", level * 4, "");
     printf("%d\n", root->value);
     print_tree(root->left, level + 1);
-    print_tree(root->right, level + 1);
 }
 
 int delete_node(Tree *tree, int value){
     Node *current = tree->root;
     int result;
+    
     while (current != NULL) {
         result = tree->cmp(value, current->value);
-        if (result == 0){
-            break;
-        }
-        else if (result > 0){
-            current = current->right;
-        } else if (result < 0) {
-            current = current->left;
-        }
+        if (result == 0) break;
+        current = (result > 0) ? current->right : current->left;
     }
-    if (current == NULL) {
-        return 1;
-    }
-    if (current->left == NULL && current->right == NULL) {
+    if (current == NULL) return 1;
+    
+    int childs = (current->left != NULL) + (current->right != NULL);
+    
+    if (childs == 0) {
         if (current->parent == NULL) {
             tree->root = NULL;
         } else if (current->parent->left == current) {
@@ -74,56 +80,48 @@ int delete_node(Tree *tree, int value){
         } else {
             current->parent->right = NULL;
         }
-        free(current);
-    } else if (current->left != NULL && current->right == NULL){
+    }
+    else if (childs == 1) {
+        Node *child = current->left ? current->left : current->right;
+        child->parent = current->parent;
+        
         if (current->parent == NULL) {
-            tree->root = current->left;
-            current->left->parent = NULL;
+            tree->root = child;
         } else if (current->parent->left == current) {
-            current->parent->left = current->left;
-            current->left->parent = current->parent;
-        } else if (current->parent->right == current) {
-            current->parent->right = current->left;
-            current->right->parent = current->parent;
+            current->parent->left = child;
+        } else {
+            current->parent->right = child;
         }
-        free(current);
-    } else if (current->left == NULL && current->right != NULL){
-        if (current->parent == NULL) {
-            tree->root = current->right;
-            current->right->parent = NULL;
-        } else if (current->parent->left == current) {
-            current->parent->left = current->right;
-            current->right->parent = current->parent;
-        } else if (current->parent->right == current) {
-            current->parent->right = current->right;
-            current->right->parent = current->parent;
-        }
-        free(current);
-    } else if (current->left != NULL && current->right != NULL){
+    }
+    else if (childs == 2) {
         Node *swap = current->right;
         while (swap->left != NULL) {
             swap = swap->left;
         }
-        if (swap->right != NULL) {
+        if (swap->parent->left == swap) {
             swap->parent->left = swap->right;
-            swap->right->parent = swap->parent;
         } else {
-            swap->parent->left = NULL;
+            swap->parent->right = swap->right;
         }
-        Node *temp = current->left;
-        current->left = swap->left;
-        swap->left = temp;
-
-        temp = current->right;
-        current->right = swap->right;
-        swap->right = temp;
-
-        temp = current->parent;
-        current->parent = swap->parent;
-        swap->parent = temp;
-
-        free(current);
+        if (swap->right != NULL) {
+            swap->right->parent = swap->parent;
+        }
+        swap->parent = current->parent;
+        swap->left = current->left;
+        swap->right = current->right;
+        
+        if (swap->left != NULL) swap->left->parent = swap;
+        if (swap->right != NULL) swap->right->parent = swap;
+        
+        if (current->parent == NULL) {
+            tree->root = swap;
+        } else if (current->parent->left == current) {
+            current->parent->left = swap;
+        } else {
+            current->parent->right = swap;
+        }
     }
+    free(current);
     return 0;
 }
 

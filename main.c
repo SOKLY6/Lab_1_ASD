@@ -6,6 +6,10 @@
 
 int main(void) {
     Tree *tree = tree_init();
+    if (tree == NULL) {
+        printf("Ошибка выделения памяти");
+        return 1;
+    }
     int choice;
     int value;
     int result;
@@ -13,7 +17,7 @@ int main(void) {
     while (1) {
         menu();
         
-        while (input_value(&choice) != 0) {
+        while (input_value(&choice) != 0 || choice < 1 || choice > 5) {
             printf("Введите корректное значение (цифру от 1 до 5): ");
         }
         
